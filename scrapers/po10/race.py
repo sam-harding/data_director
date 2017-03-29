@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 import urllib
 import datetime
 import calendar
+import uuid
 
 def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
   month_list = dict(Jan=1, Feb=2, Mar=3, Apr=4, May=5, Jun=6, Jul=7, Aug=8, Sep=9, Oct=10, Nov=11, Dec=12)
@@ -46,7 +47,11 @@ def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
   multi_race_block = soup.find_all("table", id="cphBody_dgP")
   block_iter = multi_race_block[0].find_all("tr")
 
+  uuid_link = None
+
   for section in block_iter:
+
+    #This section handles individual race information
     if section.get("style") == "background-color:DarkGray;":
       if "race" in locals():
         overall_output["races"].append(race)
@@ -57,6 +62,8 @@ def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
       race["event_name"] = event_name
       race["event_link"] = event_link
       race["event_location"] = event_location
+      uuid_link = uuid.uuid1().int
+      race["uuid_link"] = uuid_link
 
       race_array = section.getText().strip().split(" ")
       race["event"] = race_array[0]
@@ -67,20 +74,73 @@ def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
         day = race_array[2].lstrip("(")
         month = race_array[3].rstrip(")")
       elif len(race_array) == 5:
+        # Includes event_round
         race["event_round"] = race_array[2]
         day = race_array[3].lstrip("(")
         month = race_array[4].rstrip(")")
 
+      #turn date_of_race into timestamp
       date_of_race = datetime.date(int(event_year), month_list[month], int(day))
       timestamp = calendar.timegm(date_of_race.timetuple())
 
       race["event_timestamp"] = timestamp
 
-      print(race_array)
 
+      # Tidy up last race if required
+      if race != None:
+        overall_output["races"].append(race)
 
-  # Tidy up last race if required
-  if race != None:
-    overall_output["races"].append(race)
+    #This section pulls performances
+    if section.get("style") == "background-color:WhiteSmoke;" or section.get("style") == "background-color:Gainsboro;":
+      perf = {}
+      for idx, item in enumerate(section):
+        print("idx={} item={}".format(idx, item))
+        # 1 = Position
+        if idx == 1:
+          perf["position"] = item.getText()
+
+        # 2 = Performance
+        if idx == 2:
+          perf["performance"] = item.getText()
+
+        # 3 = Athlete Name
+        if idx == 3:
+          perf["athlete_id_po10"] = item.a["href"].split("=")[1]
+
+        # 4 = PB or SB
+        if idx == 4:
+          perf["was_pb"] = False
+          perf["was_sb"] = False
+          if item.getText() == "PB":
+            perf["was_pb"] = True
+            perf["was_sb"] = True
+          elif item.getText() == "SB":
+            perf["was_sb"] = True
+        
+        # 5 = Age Group
+        if idx == 5:
+          perf["age_group"] = item.getText()
+
+        # 6 = Gender
+        if idx == 6:
+          perf["gender"] = item.getText()
+
+        # 7 = Year in age group
+        if idx == 7:
+          perf["age_group_year"] = item.getText()
+
+        # 8 = Coach
+        if idx == 8 and item.a != None:
+          perf["coach_id_po10"] = item.a["href"].split("=")[1]
+
+        # 9 = Club
+        if idx == 9:
+          perf["club_name"] = item.getText()
+
+      # Link to Race
+      perf["uuid_link"] = uuid_link
+
+      overall_output["performances"].append(perf)
+
 
   return overall_output
