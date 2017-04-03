@@ -5,6 +5,9 @@ import urllib
 import datetime
 import calendar
 import uuid
+import logging
+import sys
+logger = logging.getLogger(__name__)
 
 def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
   month_list = dict(Jan=1, Feb=2, Mar=3, Apr=4, May=5, Jun=6, Jul=7, Aug=8, Sep=9, Oct=10, Nov=11, Dec=12)
@@ -26,8 +29,9 @@ def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
     url += "&date={}".format(date)
 
   r = urllib.urlopen(url).read()
-  print("Processing {}".format(url))
+  logging.info("Processing {}".format(url))
   soup = BeautifulSoup(r, "html.parser")
+  logging.debug("Length of soup = {}".format(len(soup)))
 
   #Check race exists
   #TODO
@@ -54,9 +58,11 @@ def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
   uuid_link = None
 
   for section in block_iter:
-
+    #logger.debug("in section {}".format(section))
     #This section handles individual race information
-    if section.get("style") == "background-color:DarkGray;":
+    if section.get("style") == "background-color:DarkGray;" or \
+       section.get("bgcolor") == "DarkGray":
+      #logger.debug("Processing Race")
       if "race" in locals():
         overall_output["races"].append(race)
 
@@ -99,14 +105,18 @@ def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
         overall_output["races"].append(race)
 
     #This section pulls performances
-    if section.get("style") == "background-color:WhiteSmoke;" or section.get("style") == "background-color:Gainsboro;":
+    if section.get("style") == "background-color:WhiteSmoke;" or \
+       section.get("style") == "background-color:Gainsboro;" or \
+       section.get("bgcolor") == "Gainsboro" or \
+       section.get("bgcolor") == "WhiteSmoke":
       perf = {}
+      #logger.debug("Processing performance")
       for idx, item in enumerate(section):
         #Shift IDX if there is an additional field (such as indoor)
         idx_shifter = 0
         idx = idx + idx_shifter
 
-        print("idx={} item={}".format(idx, item))
+        #print("idx={} item={}".format(idx, item))
         # 1 = Position
         if idx == 1:
           perf["position"] = item.getText()
@@ -158,5 +168,5 @@ def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
 
       overall_output["performances"].append(perf)
 
-
+  logger.info("Completed. {} Races. {} Performances".format(len(overall_output["races"]), len(overall_output["performances"])))
   return overall_output
