@@ -35,5 +35,24 @@ def scrape_athlete_po10(po10_athlete_id):
       split = element_j.get_text().split(":", 1)
       output[split[0]] = split[1]
 
-  return output
+  races = soup.find("div", id="cphBody_pnlPerformances")
+  races = races.find("table", attrs={"class": "alternatingrowspanel"})
+  output["po10_races"] = []
+  for section in races:
+    if section.get("style") == "background-color:WhiteSmoke;" or section.get("style") == "background-color:Gainsboro;":
+      i_race = {}
+      link = section.find("a")["href"].split("&")
+      for idx, slot in enumerate(link):
+        if idx == 0:
+          i_race["meeting_id"] = slot.split("=")[1]
+        elif idx == 1:
+          i_race["event"] = slot.split("=")[1]
+        elif idx == 2:
+          i_race["venue"] = slot.split("=")[1]
+        elif idx == 3:
+          i_race["date"] = slot.split("=")[1]
+      #link = link.a["href"]
 
+      output["po10_races"].append(i_race)
+
+  return output
