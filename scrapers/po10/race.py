@@ -40,7 +40,12 @@ def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
   event_detail = soup.find_all("div", id="pnlMainGeneral")
   event_detail = event_detail[0].find_all("span", id="cphBody_lblMeetingDetails")
   event_name = event_detail[0].find_all("b")[0].getText()
-  event_link = event_detail[0].find_all("a", href=True)[0]["href"]
+  try:
+    event_link = event_detail[0].find_all("a", href=True)[0]["href"]
+  except IndexError:
+    logger.debug("No event_link found")
+    event_link = None
+
   event_location = event_detail[0].find_all("br")[0].contents[0]
   event_date = event_detail[0].find_all("br")[0].contents[1].stripped_strings.next().strip().split(" ")
   event_day = event_date[0]
