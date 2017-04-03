@@ -78,11 +78,15 @@ def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
       race_array = section.getText().strip().split(" ")
       race["event"] = race_array[0]
       race["event_age_group"] = race_array[1]
-      if len(race_array) == 3:
+      if len(race_array) == 2:
+        race["event_round"] = "F"
+        day = event_day
+        month = event_month
+      elif len(race_array) == 3:
         race["event_round"] = race_array[2]
         day = event_day
         month = event_month
-      if len(race_array) == 4:
+      elif len(race_array) == 4:
         # Lacks event_round
         race["event_round"] = "F"
         day = race_array[2].lstrip("(")
