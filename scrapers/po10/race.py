@@ -26,6 +26,7 @@ def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
     url += "&date={}".format(date)
 
   r = urllib.urlopen(url).read()
+  print("Processing {}".format(url))
   soup = BeautifulSoup(r, "html.parser")
 
   #Check race exists
@@ -37,7 +38,10 @@ def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
   event_name = event_detail[0].find_all("b")[0].getText()
   event_link = event_detail[0].find_all("a", href=True)[0]["href"]
   event_location = event_detail[0].find_all("br")[0].contents[0]
-  event_year = event_detail[0].find_all("br")[0].contents[1].getText().strip().split(" ")[-1]
+  event_date = event_detail[0].find_all("br")[0].contents[1].stripped_strings.next().strip().split(" ")
+  event_day = event_date[0]
+  event_month = event_date[1]
+  event_year = event_date[2]
   if int(event_year) < 30:
     event_year = "20{}".format(event_year)
   else:
@@ -68,6 +72,10 @@ def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
       race_array = section.getText().strip().split(" ")
       race["event"] = race_array[0]
       race["event_age_group"] = race_array[1]
+      if len(race_array) == 3:
+        race["event_round"] = race_array[2]
+        day = event_day
+        month = event_month
       if len(race_array) == 4:
         # Lacks event_round
         race["event_round"] = "F"
@@ -94,6 +102,10 @@ def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
     if section.get("style") == "background-color:WhiteSmoke;" or section.get("style") == "background-color:Gainsboro;":
       perf = {}
       for idx, item in enumerate(section):
+        #Shift IDX if there is an additional field (such as indoor)
+        idx_shifter = 0
+        idx = idx + idx_shifter
+
         print("idx={} item={}".format(idx, item))
         # 1 = Position
         if idx == 1:
@@ -105,7 +117,11 @@ def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
 
         # 3 = Athlete Name
         if idx == 3:
-          perf["athlete_id_po10"] = item.a["href"].split("=")[1]
+          try:
+            perf["athlete_id_po10"] = item.a["href"].split("=")[1]
+          except TypeError:
+            perf["is_indoors"] = True
+            idx_shifter -= 1
 
         # 4 = PB or SB
         if idx == 4:
