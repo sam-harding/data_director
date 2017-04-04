@@ -11,7 +11,12 @@ logger = logging.getLogger(__name__)
 
 def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
   month_list = dict(Jan=1, Feb=2, Mar=3, Apr=4, May=5, Jun=6, Jul=7, Aug=8, Sep=9, Oct=10, Nov=11, Dec=12)
+  event_black_list = ["parkrun"]
+
   if meeting_id == None:
+    return False
+
+  if event in event_black_list:
     return False
 
   overall_output = {"races":[], "performances":[]} #List of races and perfs
@@ -28,7 +33,16 @@ def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
   if date != None:
     url += "&date={}".format(date)
 
-  r = urllib.urlopen(url).read()
+  r_pre = urllib.urlopen(url)
+  #Check for redirect - if so - return false
+  final_url = r_pre.geturl()
+  print(final_url[:15])
+  if final_url[:15] != "http://www.thep":
+    logger.debug("redirect detected")
+    return False
+
+
+  r = r_pre.read()
   logging.info("Processing {}".format(url))
   soup = BeautifulSoup(r, "html.parser")
   logging.debug("Length of soup = {}".format(len(soup)))
