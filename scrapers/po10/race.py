@@ -11,12 +11,17 @@ logger = logging.getLogger(__name__)
 
 def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
   month_list = dict(Jan=1, Feb=2, Mar=3, Apr=4, May=5, Jun=6, Jul=7, Aug=8, Sep=9, Oct=10, Nov=11, Dec=12)
-  event_black_list = ["parkrun"]
+  event_black_list = ["parkrun", "5K"]
 
   if meeting_id == None:
     return False
 
   if event in event_black_list:
+    return False
+
+  #PERF SKIP DEBUG
+  if int(date.split("-")[2]) > 11:
+    print("SKIPPING")
     return False
 
   overall_output = {"races":[], "performances":[]} #List of races and perfs
@@ -36,7 +41,6 @@ def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
   r_pre = urllib.urlopen(url)
   #Check for redirect - if so - return false
   final_url = r_pre.geturl()
-  print(final_url[:15])
   if final_url[:15] != "http://www.thep":
     logger.debug("redirect detected")
     return False
@@ -96,8 +100,14 @@ def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
 
       race_array = section.getText().strip().split(" ")
       race["event"] = race_array[0]
-      race["event_age_group"] = race_array[1]
-      if len(race_array) == 2:
+      if len(race_array) > 1:
+        race["event_age_group"] = race_array[1]
+      if len(race_array) == 1:
+        race["event_round"] = "F"
+        day = event_day
+        month = event_month
+        race["event_age_group"] = "na"
+      elif len(race_array) == 2:
         race["event_round"] = "F"
         day = event_day
         month = event_month
