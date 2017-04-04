@@ -9,6 +9,9 @@ import logging
 import sys
 logger = logging.getLogger(__name__)
 
+age_groups = ["sm", "u20m", "u17m", "u15m", "u13m", "sw", "u20w", "u17w", "u15w", "u13w", "sx", "u20x", "u17x", "u15x", "u13x"]
+event_list = ["60m", "60", "100m", "100", "200m", "200", "300m", "300", "400m", "400", "600m", "600", "800m", "800", "1500m", "1500", "3000m", "3000", "5000m", "5000", "LJ", "ZXC"]
+event_rounds = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "h1", "h2", "h3", "h4", "h5", "h6", "h7", "h8", "h9", "h10", "ns", "ns1", "ns2", "ns3", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
 def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
   month_list = dict(Jan=1, Feb=2, Mar=3, Apr=4, May=5, Jun=6, Jul=7, Aug=8, Sep=9, Oct=10, Nov=11, Dec=12)
   event_black_list = ["parkrun", "5K"]
@@ -20,9 +23,9 @@ def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
     return False
 
   #PERF SKIP DEBUG
-  if int(date.split("-")[2]) > 11:
-    print("SKIPPING")
-    return False
+  # if int(date.split("-")[2]) > 11:
+  #   print("SKIPPING")
+  #   return False
 
   overall_output = {"races":[], "performances":[]} #List of races and perfs
 
@@ -99,32 +102,39 @@ def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
       race["uuid_link"] = uuid_link
 
       race_array = section.getText().strip().split(" ")
-      race["event"] = race_array[0]
-      if len(race_array) > 1:
-        race["event_age_group"] = race_array[1]
-      if len(race_array) == 1:
-        race["event_round"] = "F"
+      day = None
+      month = None
+      race["event_round"] = None
+      race["event_age_group"] = None
+      race["event"] = None
+      for segment in race_array:
+        #Check if segment is a day
+        if segment[0] == "(" and segment[-1] == ")":
+          continue
+        if segment[0] == "(":
+          day = segment.lstrip("(")
+          continue
+        elif segment[-1] == ")":
+          month = segment.rstrip(")")
+          continue
+        elif segment.lower() in age_groups:
+          race["event_age_group"] = segment
+        elif segment.lower() in event_list:
+          race["event"] = segment
+        elif segment.lower() in event_rounds:
+          race["event_round"] = segment
+        else:
+          logger.info("Unknown segment: {}".format(segment))
+
+      #Check filled
+      if day == None:
         day = event_day
+      if month == None:
         month = event_month
+      if race["event_round"] == None:
+        race["event_round"] = "F"
+      if race["event_age_group"] == None:
         race["event_age_group"] = "na"
-      elif len(race_array) == 2:
-        race["event_round"] = "F"
-        day = event_day
-        month = event_month
-      elif len(race_array) == 3:
-        race["event_round"] = race_array[2]
-        day = event_day
-        month = event_month
-      elif len(race_array) == 4:
-        # Lacks event_round
-        race["event_round"] = "F"
-        day = race_array[2].lstrip("(")
-        month = race_array[3].rstrip(")")
-      elif len(race_array) == 5:
-        # Includes event_round
-        race["event_round"] = race_array[2]
-        day = race_array[3].lstrip("(")
-        month = race_array[4].rstrip(")")
 
       #turn date_of_race into timestamp
       date_of_race = datetime.date(int(event_year), month_list[month], int(day))
@@ -187,6 +197,8 @@ def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
         # 7 = Year in age group
         if idx == 7:
           perf["age_group_year"] = item.getText()
+          if perf["age_group_year"] == u"\xa0":
+            perf["age_group_year"] = "na"
 
         # 8 = Coach
         if idx == 8 and item.a != None:
