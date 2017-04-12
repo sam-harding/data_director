@@ -154,60 +154,68 @@ def scrape_race_po10(meeting_id=None, event=None, venue=None, date=None):
        section.get("bgcolor") == "WhiteSmoke":
       perf = {}
       #logger.debug("Processing performance")
+      idx_shifter = 0
       for idx, item in enumerate(section):
-        #Shift IDX if there is an additional field (such as indoor)
-        idx_shifter = 0
-        idx = idx + idx_shifter
 
-        #print("idx={} item={}".format(idx, item))
-        # 1 = Position
-        if idx == 1:
-          perf["position"] = item.getText()
+        try:
 
-        # 2 = Performance
-        if idx == 2:
-          perf["performance"] = item.getText()
+          #Shift IDX if there is an additional field (such as indoor)
+          idx = idx + idx_shifter
 
-        # 3 = Athlete Name
-        if idx == 3:
-          try:
-            perf["athlete_id_po10"] = item.a["href"].split("=")[1]
-          except TypeError:
-            perf["is_indoors"] = True
-            idx_shifter -= 1
+          #print("idx={} item={}".format(idx, item))
+          # 1 = Position
+          if idx == 1:
+            perf["position"] = item.getText()
 
-        # 4 = PB or SB
-        if idx == 4:
-          perf["was_pb"] = False
-          perf["was_sb"] = False
-          if item.getText() == "PB":
-            perf["was_pb"] = True
-            perf["was_sb"] = True
-          elif item.getText() == "SB":
-            perf["was_sb"] = True
-        
-        # 5 = Age Group
-        if idx == 5:
-          perf["age_group"] = item.getText()
+          # 2 = Performance
+          if idx == 2:
+            perf["performance"] = item.getText()
 
-        # 6 = Gender
-        if idx == 6:
-          perf["gender"] = item.getText()
+          # 3 = Athlete Name
+          if idx == 3:
+            try:
+              perf["athlete_id_po10"] = item.a["href"].split("=")[1]
+            except TypeError:
+              if item.getText() == "i":
+                perf["is_indoors"] = True
+                idx_shifter -= 1
+              else:
+                perf["po10_name"] = item.getText()
 
-        # 7 = Year in age group
-        if idx == 7:
-          perf["age_group_year"] = item.getText()
-          if perf["age_group_year"] == u"\xa0":
-            perf["age_group_year"] = "na"
+          # 4 = PB or SB
+          if idx == 4:
+            perf["was_pb"] = False
+            perf["was_sb"] = False
+            if item.getText() == "PB":
+              perf["was_pb"] = True
+              perf["was_sb"] = True
+            elif item.getText() == "SB":
+              perf["was_sb"] = True
+          
+          # 5 = Age Group
+          if idx == 5:
+            perf["age_group"] = item.getText()
 
-        # 8 = Coach
-        if idx == 8 and item.a != None:
-          perf["coach_id_po10"] = item.a["href"].split("=")[1]
+          # 6 = Gender
+          if idx == 6:
+            perf["gender"] = item.getText()
 
-        # 9 = Club
-        if idx == 9:
-          perf["club_name"] = item.getText()
+          # 7 = Year in age group
+          if idx == 7:
+            perf["age_group_year"] = item.getText()
+            if perf["age_group_year"] == u"\xa0":
+              perf["age_group_year"] = "na"
 
+          # 8 = Coach
+          if idx == 8 and item.a != None:
+            perf["coach_id_po10"] = item.a["href"].split("=")[1]
+
+          # 9 = Club
+          if idx == 9:
+            perf["club_name"] = item.getText()
+        except AttributeError:
+          logger.error("Error processing attribute {} idx={}".format(item, idx))
+          print("AttruteError Encountered")
       # Link to Race
       perf["uuid_link"] = uuid_link
 
