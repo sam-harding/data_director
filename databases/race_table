@@ -1,0 +1,12 @@
+CREATE TABLE races(
+race_id INT NOT NULL AUTO_INCREMENT,
+power_of_10_event_id INT,
+date DATE,
+level CHAR,
+event_name TEXT NOT NULL,
+event TEXT NOT NULL,
+age_group TEXT NOT NULL,
+location TEXT NOT NULL,
+link TEXT,
+round TEXT,
+PRIMARY KEY (race_id));

@@ -1,0 +1,9 @@
+CREATE TABLE athletes(
+athlete_id INT NOT NULL AUTO_INCREMENT,
+name TEXT,
+power_of_10_id INT,
+all_athletics_id INT,
+para BOOL NOT NULL,
+elite BOOL NOT NULL,
+dob DATE,
+PRIMARY KEY(athlete_id));
